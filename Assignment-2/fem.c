@@ -648,7 +648,6 @@ for(k=0;k<nnel;k++)
 stiffmatgen(nnel,sysdof,iel,nel,nd,p,K);
 
 }
-printf("NO faulttt\n" );
 
 applycond(K,F,nbc,sysdof,bcnode,bcval);
 printf(" \n n = %d\n",sysdof );
