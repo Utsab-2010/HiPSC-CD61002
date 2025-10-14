@@ -1,0 +1,12 @@
+OpenMP Lab
+
+setting compiler flag in Devc++
+
+Go to Tools> Compiler Options> Add the following commands when calling the linker
+Add -fopenmp
+
+setting compiler flag in CodeBlocks
+
+Go to Settings> Compiler Settings> Other compiler options
+Add -fopenmp
+ 

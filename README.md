@@ -22,3 +22,11 @@
     - Not supposed to use LLM.
     - submit the answers only.
     - no prog language restriction. Any comfortable language.
+
+
+
+    - Q1.1 sq rt of  convergence rate determines iteration number.
+    - 1.2 matrix vector product determines comp time
+    - 1.3 latency in reading matrices
+
+    - 2.2 roundoff error in direct solvers thats why. Computation time will be similar.
