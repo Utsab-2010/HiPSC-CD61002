@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <time.h>
 
 #define MAX_ITER 10000
 #define TOLERANCE 1e-6
@@ -157,12 +158,12 @@ void jacobi_preconditioner(double* A, double* r, double* z, int n) {
 
 // Conjugate Gradient method with preconditioning (BigSTABC-like algorithm)
 int bigstabc_solve(double* A, double* b, double* x, int n) {
-    printf("Starting BigSTABC (BiCGSTAB) solver...\n");
+    printf("Starting BiCGSTAB solver...\n");
     
     // Allocate working vectors
     double* r = (double*)malloc(n * sizeof(double));  // residual
     double* r_old = (double*)malloc(n*sizeof(double)); // old residual
-    double* r0 = (double*)malloc(n * sizeof(double)); // initial residual   
+    double* r0 = (double*)malloc(n*sizeof(double)); // initial residual   
     double* s = (double*)malloc(n * sizeof(double));  // preconditioned residual
     double* p = (double*)malloc(n * sizeof(double));  // search direction
     double* Ap = (double*)malloc(n * sizeof(double)); // A*p
@@ -175,13 +176,17 @@ int bigstabc_solve(double* A, double* b, double* x, int n) {
     }
     
     // Initialize: r = b - A*x (x starts as zero vector)
-    matvec(A, x, r, n);
+    matvec(A, x, temp, n);
+    vector_add(b,temp,r,-1.0,n);
 
-    int i;
-    for (i = 0; i < n; i++) {
-        r[i] = b[i] - r[i];
+    for(int i = 0; i < n; i++){
+        r0[i] = (rand() % 100)/100.0;  // Random values between 0 and 99
     }
-    vector_copy(r, r0, n);
+    // int i;
+    // for (i = 0; i < n; i++) {
+    //     r[i] = b[i] - r[i];
+    // }
+    // vector_copy(r0, r, n);
     vector_copy(r, p, n);  // Initialize p = r0
     
     double initial_residual = vector_norm(r, n);
@@ -196,6 +201,8 @@ int bigstabc_solve(double* A, double* b, double* x, int n) {
     }
     
     // Main BiCGSTAB iteration loop
+    double time_start  = clock();
+
     int iter;
     for (iter = 0; iter < MAX_ITER; iter++) {
         // Ap = A * p
@@ -211,17 +218,30 @@ int bigstabc_solve(double* A, double* b, double* x, int n) {
                    iter, p_norm, ap_norm, r0_norm);
         }
 
-        double ap_dot_r0 = dot_product(Ap, r0, n);
+        double  ap_dot_r0= dot_product(Ap, r0, n);
         
         if (fabs(ap_dot_r0) < 1e-15) {
             printf("BiCGSTAB breakdown: Ap dot r0 = %e at iteration %d\n", ap_dot_r0, iter);
             printf("This indicates the algorithm has broken down.\n");
             printf("Trying to restart with current residual as new r0...\n");
             
+            printf("DEBUG: Before restart - r norm: %e\n", vector_norm(r, n));
+            printf("DEBUG: Before restart - r0 norm: %e\n", vector_norm(r0, n));
+            printf("DEBUG: Before restart - p norm: %e\n", vector_norm(p, n));
+            printf("DEBUG: Before restart - Ap norm: %e\n", vector_norm(Ap, n));
+            
             // Restart: use current residual as new r0
             vector_copy(r, r0, n);
             vector_copy(r, p, n);
+            
+            // CRUCIAL FIX: We must recalculate Ap since p has changed!
+            matvec(A, p, Ap, n);
             ap_dot_r0 = dot_product(Ap, r0, n);
+            
+            printf("DEBUG: After restart - new r0 norm: %e\n", vector_norm(r0, n));
+            printf("DEBUG: After restart - new p norm: %e\n", vector_norm(p, n));
+            printf("DEBUG: After restart - new Ap norm: %e\n", vector_norm(Ap, n));
+            printf("DEBUG: After restart - new ap_dot_r0: %e\n", ap_dot_r0);
             
             if (fabs(ap_dot_r0) < 1e-15) {
                 printf("Restart failed. Terminating.\n");
@@ -273,12 +293,14 @@ int bigstabc_solve(double* A, double* b, double* x, int n) {
             break;
         }
         
-        if (iter % 100 == 0 || relative_residual < TOLERANCE) {
-            printf("Iteration %d: residual = %e, relative = %e\n", 
-                   iter, residual_norm, relative_residual);
-        }
+        // if (iter % 100 == 0 || relative_residual < TOLERANCE) {
+        //     printf("Iteration %d: residual = %e, relative = %e\n", 
+        //            iter, residual_norm, relative_residual);
+        // }
         
         if (relative_residual < TOLERANCE) {
+            double total_time = (clock() - time_start) / CLOCKS_PER_SEC;
+            printf("Total time taken: %f seconds\n", total_time);
             printf("Converged in %d iterations\n", iter + 1);
             free(r); free(r_old); free(r0); free(s); free(p); free(Ap); free(As); free(temp);
             return iter + 1;
@@ -293,7 +315,8 @@ int bigstabc_solve(double* A, double* b, double* x, int n) {
         vector_add(p, Ap, temp, -omega, n);  // temp = p - omega * Ap
         vector_add(r, temp, p, beta, n);     // p = r + beta * temp
     }
-    
+    double total_time = (clock() - time_start) / CLOCKS_PER_SEC;
+    printf("Total time taken: %f seconds\n", total_time);
     printf("Warning: Maximum iterations reached without convergence\n");
     free(r); free(r_old); free(r0); free(s); free(p); free(Ap); free(As); free(temp);
     return -1;

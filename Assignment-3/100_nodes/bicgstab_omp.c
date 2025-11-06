@@ -3,9 +3,11 @@
 #include <math.h>
 #include <string.h>
 #include <time.h>
+#include <omp.h>
 
 #define MAX_ITER 10000
 #define TOLERANCE 1e-6
+#define NUM_THREADS 4
 
 // Function to read matrix from Kmat.txt
 int read_matrix(const char* filename, double** K, int* n) {
@@ -94,6 +96,7 @@ int read_vector(const char* filename, double** F, int* n) {
 // Matrix-vector multiplication: y = A*x
 void matvec(double* A, double* x, double* y, int n) {
     int i, j;
+    #pragma omp parallel for private(i,j) default(shared) num_threads(NUM_THREADS)
     for (i = 0; i < n; i++) {
         y[i] = 0.0;
         for (j = 0; j < n; j++) {
@@ -106,14 +109,19 @@ void matvec(double* A, double* x, double* y, int n) {
 double dot_product(double* a, double* b, int n) {
     double result = 0.0;
     int i;
+
+    #pragma omp parallel for reduction(+:result) private(i) default(shared) num_threads(NUM_THREADS)
     for (i = 0; i < n; i++) {
-        result += a[i] * b[i];
+    result += a[i] * b[i];
     }
+    
+
     return result;
 }
 
 void vector_copy(double* src, double* dest, int n) {
     int i;
+    #pragma omp parallel for private(i) default(shared) num_threads(NUM_THREADS)
     for (i = 0; i < n; i++) {
         dest[i] = src[i];
     }
@@ -129,6 +137,7 @@ void vector_axpy(double* y, double a, double* x, int n) {
 
 void vector_scale(double* x, double a, int n) {
     int i;
+    #pragma omp parallel for private(i) default(shared) num_threads(NUM_THREADS)
     for (i = 0; i < n; i++) {
         x[i] *= a;
     }
@@ -136,24 +145,13 @@ void vector_scale(double* x, double a, int n) {
 
 void vector_add(double* a, double* b, double* c, double s, int n){
     int i;
+    #pragma omp parallel for private(i) default(shared) num_threads(NUM_THREADS)
     for(i = 0; i < n; i++){
         c[i] = a[i] + s * b[i];
     }
 }
 double vector_norm(double* x, int n) {
     return sqrt(dot_product(x, x, n));
-}
-
-// Simple Jacobi preconditioner (diagonal preconditioning)
-void jacobi_preconditioner(double* A, double* r, double* z, int n) {
-    int i;
-    for (i = 0; i < n; i++) {
-        if (fabs(A[i*n + i]) > 1e-12) {
-            z[i] = r[i] / A[i*n + i];
-        } else {
-            z[i] = r[i]; // If diagonal is zero, no preconditioning
-        }
-    }
 }
 
 // Conjugate Gradient method with preconditioning (BigSTABC-like algorithm)
@@ -183,8 +181,11 @@ int bigstabc_solve(double* A, double* b, double* x, int n) {
     // for (i = 0; i < n; i++) {
     //     r[i] = b[i] - r[i];
     // }
-    vector_copy(r, r0, n);
-    vector_copy(r0, p, n);  // Initialize p = r0
+    for(int i = 0; i < n; i++){
+        r0[i] = (rand() % 100)/100.0;  // Random values between 0 and 99
+    }
+    // vector_copy(r, r0, n);
+    vector_copy(r, p, n);  // Initialize p = r0
     
     double initial_residual = vector_norm(r, n);
     printf("Initial residual norm: %e\n", initial_residual);
