@@ -7,7 +7,7 @@
 
 #define MAX_ITER 10000
 #define TOLERANCE 1e-6
-#define NUM_THREADS 4
+#define NUM_THREADS 2
 
 // Function to read matrix from Kmat.txt
 int read_matrix(const char* filename, double** K, int* n) {
@@ -124,14 +124,6 @@ void vector_copy(double* src, double* dest, int n) {
     #pragma omp parallel for private(i) default(shared) num_threads(NUM_THREADS)
     for (i = 0; i < n; i++) {
         dest[i] = src[i];
-    }
-}
-
-void vector_axpy(double* y, double a, double* x, int n) {
-    // y = y + a*x
-    int i;
-    for (i = 0; i < n; i++) {
-        y[i] += a * x[i];
     }
 }
 
