@@ -96,7 +96,7 @@ int read_vector(const char* filename, double** F, int* n) {
 // Matrix-vector multiplication: y = A*x
 void matvec(double* A, double* x, double* y, int n) {
     int i, j;
-    #pragma omp parallel for private(i,j) default(shared) num_threads(NUM_THREADS)
+    #pragma omp parallel for private(i,j) default(shared) 
     for (i = 0; i < n; i++) {
         y[i] = 0.0;
         for (j = 0; j < n; j++) {
@@ -110,7 +110,7 @@ double dot_product(double* a, double* b, int n) {
     double result = 0.0;
     int i;
 
-    #pragma omp parallel for reduction(+:result) private(i) default(shared) num_threads(NUM_THREADS)
+    #pragma omp parallel for reduction(+:result) private(i) default(shared) 
     for (i = 0; i < n; i++) {
     result += a[i] * b[i];
     }
@@ -121,7 +121,7 @@ double dot_product(double* a, double* b, int n) {
 
 void vector_copy(double* src, double* dest, int n) {
     int i;
-    #pragma omp parallel for private(i) default(shared) num_threads(NUM_THREADS)
+    #pragma omp parallel for private(i) default(shared) 
     for (i = 0; i < n; i++) {
         dest[i] = src[i];
     }
@@ -129,7 +129,7 @@ void vector_copy(double* src, double* dest, int n) {
 
 void vector_scale(double* x, double a, int n) {
     int i;
-    #pragma omp parallel for private(i) default(shared) num_threads(NUM_THREADS)
+    #pragma omp parallel for private(i) default(shared) 
     for (i = 0; i < n; i++) {
         x[i] *= a;
     }
@@ -137,7 +137,7 @@ void vector_scale(double* x, double a, int n) {
 
 void vector_add(double* a, double* b, double* c, double s, int n){
     int i;
-    #pragma omp parallel for private(i) default(shared) num_threads(NUM_THREADS)
+    #pragma omp parallel for private(i) default(shared) 
     for(i = 0; i < n; i++){
         c[i] = a[i] + s * b[i];
     }
@@ -191,7 +191,7 @@ int bigstabc_solve(double* A, double* b, double* x, int n) {
     }
     
     // Main BiCGSTAB iteration loop
-    double time_start  = clock();
+    double time_start  = omp_get_wtime();
 
     int iter;
     for (iter = 0; iter < MAX_ITER; iter++) {
@@ -289,7 +289,7 @@ int bigstabc_solve(double* A, double* b, double* x, int n) {
         }
         
         if (relative_residual < TOLERANCE) {
-            double total_time = (clock() - time_start) / CLOCKS_PER_SEC;
+            double total_time = omp_get_wtime() - time_start;
             printf("Total time taken: %f seconds\n", total_time);
             printf("Converged in %d iterations\n", iter + 1);
             free(r); free(r_old); free(r0); free(s); free(p); free(Ap); free(As); free(temp);
@@ -305,7 +305,7 @@ int bigstabc_solve(double* A, double* b, double* x, int n) {
         vector_add(p, Ap, temp, -omega, n);  // temp = p - omega * Ap
         vector_add(r, temp, p, beta, n);     // p = r + beta * temp
     }
-    double total_time = (clock() - time_start) / CLOCKS_PER_SEC;
+    double total_time = omp_get_wtime() - time_start;
     printf("Total time taken: %f seconds\n", total_time);
     printf("Warning: Maximum iterations reached without convergence\n");
     free(r); free(r_old); free(r0); free(s); free(p); free(Ap); free(As); free(temp);
@@ -362,14 +362,27 @@ int main(int argc, char* argv[]) {
     printf("BigSTABC Linear System Solver\n");
     printf("=============================\n\n");
     
-    // Parse command-line arguments for directory path
+    // Parse command-line arguments for directory path and number of threads
     char* dir_path = ".";  // Default to current directory
+    int num_threads = 2;   // Default to 2 threads
+    
     if (argc > 1) {
         dir_path = argv[1];
         printf("Using directory: %s\n", dir_path);
     } else {
         printf("Using current directory (default)\n");
     }
+    
+    if (argc > 2) {
+        num_threads = atoi(argv[2]);
+        if (num_threads <= 0) {
+            printf("Invalid number of threads. Using default: 2\n");
+            num_threads = 2;
+        }
+    }
+    
+    omp_set_num_threads(num_threads);
+    printf("Using %d OpenMP threads\n\n", num_threads);
     
     // Construct file paths
     char kmat_path[512];
