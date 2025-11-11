@@ -1,5 +1,20 @@
 # HiPSC-CD61002
 
+### Endsem
+- Read about how cuda can be used for matrix solvers. Can be asked.
+- What was the problem with our CUDA implementation when using only 1 block?
+- Total Marks: 35 
+- Open Notes (any printed or Handwritten) 
+- Section I: 4 q of 6 marks - Recall and Understanding
+	- Pre-mid: Matrix Solvers and Basics of Parallelisation
+	- OpenMP and Shared Memory
+	- MPI and Distributed Memory
+	- GPU and CUDA
+- Section II:
+	- Application: Write parallel algorithms/source code for given problem.
+		- OpenMP/MPI/CUDA: 5 + 6
+		- Tip: Think about the serial algo first and then approach the problem.
+
 ### Midsem Syllabus
 - Discretisation, forming matrices and errors 
 - Basic iterative methods and convergence
